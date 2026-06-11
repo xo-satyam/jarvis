@@ -1,0 +1,18 @@
+# Core (deterministic engine) - required
+pytest==8.2.0
+
+# Computer control backend (macOS). Optional on Linux CI (mock backend used).
+pyautogui==0.9.54 ; sys_platform == 'darwin'
+
+# --- Phase 1 voice + orb (macOS runtime; all fully offline) ---
+# Installed on macOS only; CI uses mock backends and does not need these.
+PySide6==6.7.2 ; sys_platform == 'darwin'
+sounddevice==0.4.7 ; sys_platform == 'darwin'
+openwakeword==0.6.0 ; sys_platform == 'darwin'
+faster-whisper==1.0.3 ; sys_platform == 'darwin'
+numpy==1.26.4 ; sys_platform == 'darwin'
+# TTS uses the built-in macOS 'say' binary - no Python dependency.
+
+# --- Phase 3 vision (not yet implemented) ---
+# pytesseract
+# pillow
