@@ -6,6 +6,10 @@ pytest:
   image: python:3.11-slim
   variables:
     JARVIS_BACKEND: "mock"
+    JARVIS_AUDIO: "mock"
+    JARVIS_WAKEWORD: "mock"
+    JARVIS_STT: "mock"
+    JARVIS_TTS: "mock"
   before_script:
     - python -m pip install --upgrade pip
     - pip install pytest
