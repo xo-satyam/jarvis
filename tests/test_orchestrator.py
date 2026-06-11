@@ -53,3 +53,44 @@ def test_empty_transcript_handled():
     orch.capture_and_transcribe(b"utterance")
     assert tts._backend.spoken == ["I didn't catch that."]  # noqa: SLF001
     assert orb.state == OrbState.IDLE
+
+
+def test_audio_frames_buffered_and_transcribed_on_silence():
+    """Utterance capture: audio frame -> silence triggers transcribe."""
+    bus, backend, tts, orch, orb = _build("paste")
+    bus.emit("wakeword.detected")
+    assert orb.state == OrbState.LISTENING
+    # feed loud audio frames (simulating speech)
+    loud = b"\xff\x7f" * 640  # 640 samples of max volume
+    for _ in range(10):
+        bus.emit("audio.frame", frame=loud)
+    assert orch._buffer  # noqa: SLF001
+    # feed silence frames -> triggers transcribe
+    quiet = b"\x00\x00" * 640
+    for _ in range(30):
+        bus.emit("audio.frame", frame=quiet)
+    assert ("hotkey", ("command", "v")) in backend.calls or ("press",)  # paste action
+    assert orb.state == OrbState.IDLE
+
+
+def test_utterance_cutoff_at_max_frames():
+    """Max utterance length forces transcribe even without silence."""
+    bus, backend, tts, orch, orb = _build("paste")
+    bus.emit("wakeword.detected")
+    loud = b"\xff\x7f" * 1280  # 1280 samples = 1 full frame @ 16kHz
+    for _ in range(160):  # exceeds _MAX_FRAMES (150)
+        bus.emit("audio.frame", frame=loud)
+    assert orb.state == OrbState.IDLE
+
+
+def test_audio_before_wake_ignored():
+    """Audio frames before wake word should not be buffered."""
+    bus, backend, tts, orch, orb = _build("paste")
+    loud = b"\xff\x7f" * 640
+    for _ in range(10):
+        bus.emit("audio.frame", frame=loud)
+    assert len(orch._buffer) == 0  # noqa: SLF001
+    bus.emit("wakeword.detected")
+    # now frames should buffer
+    bus.emit("audio.frame", frame=loud)
+    assert len(orch._buffer) > 0  # noqa: SLF001

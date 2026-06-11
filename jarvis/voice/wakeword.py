@@ -46,8 +46,7 @@ class OpenWakeWordBackend(WakeWordBackend):
     def __init__(self, threshold: float = 0.5) -> None:
         from openwakeword.model import Model  # noqa: WPS433 - optional dep
 
-        # Default bundled models include a 'hey jarvis' model.
-        self._model = Model(wakeword_models=["hey_jarvis"], inference_framework="onnx")
+        self._model = Model(wakeword_models=["alexa"], inference_framework="onnx")
         self._threshold = threshold
 
     def detect(self, frame: bytes) -> bool:
