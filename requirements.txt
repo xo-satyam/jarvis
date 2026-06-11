@@ -1,0 +1,17 @@
+# Core (deterministic engine) - required
+pytest==8.2.0
+
+# Computer control backend (macOS). Optional on Linux CI (mock backend used).
+pyautogui==0.9.54 ; sys_platform == 'darwin'
+
+# UI (Phase 1/3, not yet implemented)
+# PySide6==6.7.0
+
+# Voice extras (Phase 1, not yet implemented)
+# openwakeword
+# sounddevice
+# pyttsx3
+
+# Vision extras (Phase 3, not yet implemented)
+# pytesseract
+# pillow
