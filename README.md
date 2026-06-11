@@ -1,93 +1,75 @@
-# jarvis-V2
+# JARVIS V2
 
+An AI Operating System layer for macOS, inspired by Iron Man's JARVIS. It lives
+on the desktop as a single orb: it listens, understands, acts, and responds.
 
+This repository currently contains the **deterministic core (Phase 2)**, fully
+implemented and tested, plus scaffolding for Phase 1 (voice) and Phase 3
+(screen understanding).
 
-## Getting started
+## Philosophy: deterministic before intelligent
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+If JARVIS already knows how to perform a task, it executes immediately with
+**no LLM in the path**. Reasoning is expensive and latency destroys the magic.
+Actions like copy, paste, open Chrome, switch tab, type text, press enter and
+scroll are predefined blocks of code resolved by alias matching. Intelligence
+is reserved for tasks deterministic systems cannot solve (e.g. "explain this
+error"), which belong to Phase 3.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Architecture
 
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+Service-oriented. Each service has one responsibility and communicates through
+an `EventBus`; services are never tightly coupled.
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/jarvis-group9951924/jarvis-v2.git
-git branch -M main
-git push -uf origin main
+JarvisApplication
+  EventBus            core/events.py      pub/sub, error-isolated
+  LifecycleManager    core/lifecycle.py   ordered start/stop
+  Profiler            core/profiler.py    latency budgets
+  ActionRegistry      intent/registry.py  Action definitions + alias index
+  IntentMatcher       intent/matcher.py   deterministic phrase -> Action
+  ActionEngine        actions/engine.py   resolve + execute via Backend
+  Backend             actions/backend.py  macOS (pyautogui/osascript) | mock
 ```
 
-## Integrate with your tools
+The `Backend` abstraction lets the engine run headless: tests and CI use a
+`MockBackend` that records calls; macOS uses a real backend. Select with the
+`JARVIS_BACKEND` env var (`mock` or `macos`).
 
-* [Set up project integrations](https://gitlab.com/jarvis-group9951924/jarvis-v2/-/settings/integrations)
+## Performance targets
 
-## Collaborate with your team
+| Stage              | Budget   |
+|--------------------|----------|
+| Intent resolution  | < 50 ms  |
+| Action execution   | < 100 ms |
+| Wake detection     | < 100 ms (Phase 1) |
+| STT                | < 300 ms (Phase 1) |
+| Vision response    | < 2 s (Phase 3) |
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+The `Profiler` logs a warning whenever a budget is exceeded.
 
-## Test and Deploy
+## Running
 
-Use the built-in continuous integration in GitLab.
+```bash
+pip install -r requirements.txt
+JARVIS_BACKEND=mock python -m jarvis.main   # type commands, no GUI needed
+```
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+On macOS, omit `JARVIS_BACKEND` (or set `macos`) to drive the real OS; grant
+Accessibility permissions to your terminal.
 
-***
+## Tests
 
-# Editing this README
+```bash
+JARVIS_BACKEND=mock python -m pytest -q
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+CI runs the suite on Linux with the mock backend (see `.gitlab-ci.yml`).
 
-## Suggestions for a good README
+## Status
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- **Phase 2 - Computer control:** implemented and tested.
+- **Phase 1 - Voice (wake word, STT, TTS, orb):** scaffolded with interfaces
+  and TODOs.
+- **Phase 3 - Screen understanding (capture, OCR, analyze, explain):**
+  scaffolded with interfaces and TODOs.
